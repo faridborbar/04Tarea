@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy as np
+import matplotlib.pyplot as plt
+
+
 
 class Planeta(object):
     '''
@@ -27,9 +30,10 @@ class Planeta(object):
         primer orden.
         '''
         x, y, vx, vy = self.y_actual
-        raiz=np.sqrt(x**2 + y**2)
-        fx = (x / raiz) * (1- 2*self.alpha / raiz)
-        fy = (y / raiz) * (1- 2*self.alpha / raiz)
+        r = np.sqrt(x**2 + y**2)
+        fx = -(1/r**2 + self.alpha/r**3)*(x/r)   # asumimos M,G,m = 1
+        fy = -(1/r**2 + self.alpha/r**3)*(y/r)
+
         return [vx, vy, fx, fy]
 
     def avanza_euler(self, dt):
@@ -38,7 +42,18 @@ class Planeta(object):
         en un intervalo de tiempo dt usando el método de Euler explícito. El
         método no retorna nada, pero re-setea los valores de self.y_actual.
         '''
+        vx, vy, ax, ay= self.ecuacion_de_movimiento()
+
+        xn1 = self.y_actual[0] + dt * vx
+        yn1 = self.y_actual[1] + dt * vy
+        vxn1 = self.y_actual[2] + dt * ax
+        vyn1 = self.y_actual[3] + dt * ay
+
+        self.y_actual= [xn1, yn1, vxn1, vyn1]
+
         pass
+
+
 
     def avanza_rk4(self, dt):
         '''
@@ -83,24 +98,93 @@ class Planeta(object):
         self.y_actual= [X_n1, Y_n1, Vx_n1, Vy_n1]
 
 
-
-
-
-
-
-
-
-
         pass
+
+
 
     def avanza_verlet(self, dt):
         '''
         Similar a avanza_euler, pero usando Verlet.
         '''
+        [x, y, vx, vy] = self.y_actual
+        vx1, vy1, ax1, ay1 = self.ecuacion_de_movimiento()
+
+        x_n1 = x + dt*vx1 + ax1*(dt**2)/2.
+        y_n1 = y + dt*vy1 + ay1*(dt**2)/2.
+
+        self.y_actual = [x_n1, y_n1, vx1, vy1]
+
+        vx2, vy2, ax2, ay2 = self.ecuacion_de_movimiento()
+
+        vxf = vx + ax2 * dt/2.0 + ax1 * dt/2.0
+        vyf = vy + ay2 * dt/2.0 + ay1 * dt/2.0
+
+        self.y_actual = [x_n1, y_n1, vxf, vyf]
+
         pass
 
     def energia_total(self):
         '''
         Calcula la enérgía total del sistema en las condiciones actuales.
+        Asumimos g=1, M=1 y m=1
         '''
+        x, y, vx, vy = self.y_actual
+        vx, vy, ax, ay = self.ecuacion_de_movimiento()
+
+        r = np.sqrt(x**2+y**2)
+
+        E = ((vx**2 + vy**2) * (0.5)) - 1/r + (self.alpha / (r**2))
+        return E
+
+
+
         pass
+
+
+'''
+Ahora implementamos el codigo para plotear
+'''
+
+#planetaX = Planeta([10, 0, 0, 0.1], 10**(-2.871))
+planetaX = Planeta([10, 0, 0, 0.4], 0)
+
+largo = 50000
+fin = 5000.0
+t = np.linspace(0, fin, largo)
+
+VectorX = []
+VectorX = np.append(VectorX,planetaX.y_actual[0])
+VectorY = []
+VectorY = np.append(VectorY,planetaX.y_actual[1])
+VectorE = []
+
+dt = fin/largo
+
+for i in range(0, largo):
+    #planetaX.avanza_verlet(dt)
+    #planetaX.avanza_euler(dt)
+    planetaX.avanza_rk4(dt)
+    VectorX = np.append(VectorX,planetaX.y_actual[0])
+    VectorY = np.append(VectorY,planetaX.y_actual[1])
+    VectorE = np.append(VectorE,planetaX.energia_total())
+    planetaX.t_actual += dt
+
+
+fig = plt.figure()
+
+plt.plot(VectorX, VectorY, 'g')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title("orbita para el metodo de RK4 con alfa= 0")
+#plt.title("orbita para el metodo de RK4 con alfa = 10**(-2.871)")
+plt.grid()
+
+fig = plt.figure()
+
+plt.plot(t, VectorE, 'g')
+plt.xlabel('tiempo')
+plt.ylabel('Energia')
+plt.title("energia para el metodo de RK4")
+plt.grid()
+
+plt.show()
